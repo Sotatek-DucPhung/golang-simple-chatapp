@@ -26,17 +26,15 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case cl := <-h.Register:
-			if _, ok := h.Rooms[cl.RoomID]; ok {
-				r := h.Rooms[cl.RoomID]
-
+			if r, ok := h.Rooms[cl.RoomID]; ok {
 				if _, ok := r.Clients[cl.ID]; !ok {
 					r.Clients[cl.ID] = cl
 				}
 			}
 		case cl := <-h.Unregister:
-			if _, ok := h.Rooms[cl.RoomID]; ok {
-				if _, ok := h.Rooms[cl.RoomID].Clients[cl.ID]; ok {
-					if len(h.Rooms[cl.RoomID].Clients) != 0 {
+			if r, ok := h.Rooms[cl.RoomID]; ok {
+				if _, ok := r.Clients[cl.ID]; ok {
+					if len(r.Clients) != 0 {
 						h.Broadcast <- &Message{
 							Content:  "user left the chat",
 							RoomID:   cl.RoomID,
@@ -44,15 +42,14 @@ func (h *Hub) Run() {
 						}
 					}
 
-					delete(h.Rooms[cl.RoomID].Clients, cl.ID)
+					delete(r.Clients, cl.ID)
 					close(cl.Message)
 				}
 			}
 
 		case m := <-h.Broadcast:
-			if _, ok := h.Rooms[m.RoomID]; ok {
-
-				for _, cl := range h.Rooms[m.RoomID].Clients {
+			if r, ok := h.Rooms[m.RoomID]; ok {
+				for _, cl := range r.Clients {
 					cl.Message <- m
 				}
 			}
